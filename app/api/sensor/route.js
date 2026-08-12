@@ -5,36 +5,58 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ... (Simpan method GET dan POST yang sudah ada di sini) ...
+// ⚠️ WAJIB: Pastikan 'POST' ditulis dengan huruf KAPITAL
+export async function POST(req) {
+  try {
+    const body = await req.json();
+    const { ph, temp, tds } = body;
 
-// Tambahkan handler DELETE berikut:
+    const { data, error } = await supabase
+      .from('sensor_logs') // Ganti dengan nama tabel Supabase kamu
+      .insert([{ ph, temp, tds }]);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ message: 'Success', data }, { status: 200 });
+  } catch (err) {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function GET() {
+  try {
+    const { data, error } = await supabase
+      .from('sensor_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json(data, { status: 200 });
+  } catch (err) {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
 export async function DELETE(req) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    // Ganti 'sensor_logs' dengan NAMA TABEL kamu di Supabase
-    const tableName = 'sensor_logs'; 
-
     if (id) {
-      // 1. Hapus SATU baris spesifik jika ada query ?id=...
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('sensor_logs').delete().eq('id', id);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      return NextResponse.json({ message: 'Data berhasil dihapus' }, { status: 200 });
     } else {
-      // 2. Hapus SEMUA data di tabel
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .neq('id', 0); // Menghapus semua baris yang ID-nya bukan 0
-
+      const { error } = await supabase.from('sensor_logs').delete().neq('id', 0);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      return NextResponse.json({ message: 'Semua log berhasil dibersihkan' }, { status: 200 });
     }
+
+    return NextResponse.json({ message: 'Berhasil dihapus' }, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
