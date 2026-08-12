@@ -10,9 +10,19 @@ import {
   Beaker 
 } from 'lucide-react';
 
+// 1. Definisikan tipe data untuk TypeScript
+interface SensorLog {
+  id?: number;
+  created_at: string;
+  ph: number;
+  temp: number;
+  tds: number;
+}
+
 export default function Dashboard() {
-  const [logs, setLogs] = useState([]);
-  const [latest, setLatest] = useState({ ph: 0, temp: 0, tds: 0 });
+  // 2. Tentukan tipe data pada useState
+  const [logs, setLogs] = useState<SensorLog[]>([]);
+  const [latest, setLatest] = useState<SensorLog>({ ph: 0, temp: 0, tds: 0, created_at: '' });
 
   const fetchData = async () => {
     try {
@@ -29,7 +39,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 10000); // Sync data tiap 10 detik
+    const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, []);
 
