@@ -1,39 +1,41 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ESP32 mengirim data ke endpoint ini via POST
-export async function POST(request) {
+// ... (Simpan method GET dan POST yang sudah ada di sini) ...
+
+// Tambahkan handler DELETE berikut:
+export async function DELETE(req) {
   try {
-    const { ph, temp, tds } = await request.json();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
 
-    const { data, error } = await supabase
-      .from('sensor_data')
-      .insert([{ ph, temp, tds }]);
+    // Ganti 'sensor_logs' dengan NAMA TABEL kamu di Supabase
+    const tableName = 'sensor_logs'; 
 
-    if (error) throw error;
-    return NextResponse.json({ message: 'Data berhasil disimpan' }, { status: 200 });
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
+    if (id) {
+      // 1. Hapus SATU baris spesifik jika ada query ?id=...
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', id);
 
-// Frontend mengambil data via GET
-export async function GET() {
-  try {
-    const { data, error } = await supabase
-      .from('sensor_data')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ message: 'Data berhasil dihapus' }, { status: 200 });
+    } else {
+      // 2. Hapus SEMUA data di tabel
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .neq('id', 0); // Menghapus semua baris yang ID-nya bukan 0
 
-    if (error) throw error;
-    return NextResponse.json(data, { status: 200 });
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ message: 'Semua log berhasil dibersihkan' }, { status: 200 });
+    }
+  } catch (err) {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
