@@ -14,7 +14,6 @@ interface SensorData {
 export default function Home() {
   const [data, setData] = useState<SensorData[]>([]);
   const [latest, setLatest] = useState<SensorData>({ ph: 0, temp: 0, tds: 0 });
-  const [isConnected, setIsConnected] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -26,16 +25,13 @@ export default function Home() {
         if (sensorList.length > 0) {
           setData(sensorList);
           setLatest(sensorList[0]);
-          setIsConnected(true);
         } else {
           setData([]);
           setLatest({ ph: 0, temp: 0, tds: 0 });
-          setIsConnected(false);
         }
       }
     } catch (err) {
       console.error("Gagal mengambil data:", err);
-      setIsConnected(false);
     }
   };
 
@@ -55,7 +51,7 @@ export default function Home() {
     try {
       const res = await fetch("/api/sensor", { method: "DELETE" });
       if (res.ok) {
-        fetchData(); // Refresh UI
+        fetchData();
       } else {
         alert("Gagal menghapus log!");
       }
@@ -70,7 +66,7 @@ export default function Home() {
     try {
       const res = await fetch(`/api/sensor?id=${id}`, { method: "DELETE" });
       if (res.ok) {
-        fetchData(); // Refresh UI
+        fetchData();
       }
     } catch (err) {
       console.error(err);
@@ -95,7 +91,7 @@ export default function Home() {
     <main className="min-h-screen bg-[#0b131e] text-white p-6 md:p-12 font-sans">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#111c2a] p-6 rounded-2xl border border-slate-800">
+        <div className="bg-[#111c2a] p-6 rounded-2xl border border-slate-800">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
               <Database className="w-8 h-8" />
@@ -108,12 +104,6 @@ export default function Home() {
                 Sistem Pemantauan pH, Suhu, dan Konsentrasi Pupuk Cair Real-Time
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-full">
-            <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
-            <span className="text-xs font-semibold tracking-wider text-slate-300">
-              {isConnected ? "TERHUBUNG (ONLINE)" : "TERPUTUS (OFFLINE)"}
-            </span>
           </div>
         </div>
 
