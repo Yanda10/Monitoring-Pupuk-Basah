@@ -73,18 +73,29 @@ export default function Home() {
     }
   };
 
+  // Fungsi Ekspor CSV dengan Waktu Terkalibrasi WIB (GMT+7)
   const exportToCSV = () => {
     if (data.length === 0) return;
     const headers = "Waktu,pH,Suhu (C),Konsentrasi (PPM)\n";
     const rows = data
-      .map((item) => `"${item.created_at || ""}",${item.ph},${item.temp},${item.tds}`)
+      .map((item) => {
+        // Konversi string UTC dari DB ke format tanggal lokal WIB
+        const waktuWIB = item.created_at
+          ? new Date(item.created_at).toLocaleString("id-ID", {
+              timeZone: "Asia/Jakarta",
+            })
+          : "";
+        return `"${waktuWIB}",${item.ph},${item.temp},${item.tds}`;
+      })
       .join("\n");
-    const blob = new Blob([headers + rows], { type: "text/csv" });
+
+    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `data_sensor_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -178,7 +189,11 @@ export default function Home() {
                   data.map((row, idx) => (
                     <tr key={row.id || idx} className="hover:bg-slate-50/50">
                       <td className="p-4">
-                        {row.created_at ? new Date(row.created_at).toLocaleString("id-ID") : "-"}
+                        {row.created_at
+                          ? new Date(row.created_at).toLocaleString("id-ID", {
+                              timeZone: "Asia/Jakarta",
+                            })
+                          : "-"}
                       </td>
                       <td className="p-4 font-bold">{Number(row.ph).toFixed(2)}</td>
                       <td className="p-4">{Number(row.temp).toFixed(1)}</td>
