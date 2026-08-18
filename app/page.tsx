@@ -15,16 +15,43 @@ export default function Home() {
   const [data, setData] = useState<SensorData[]>([]);
   const [latest, setLatest] = useState<SensorData>({ ph: 0, temp: 0, tds: 0 });
 
+  // Helper untuk menyaring data menjadi 1 baris per jam (WIB)
+  const filterHourly = (list: SensorData[]) => {
+    const seenHours = new Set<string>();
+    return list.filter((item) => {
+      if (!item.created_at) return false;
+      
+      // Kunci unik berdasarkan Tanggal & Jam lokal WIB (contoh: "18/08/2026, 16")
+      const hourKey = new Date(item.created_at).toLocaleString("id-ID", {
+        timeZone: "Asia/Jakarta",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+      });
+
+      if (!seenHours.has(hourKey)) {
+        seenHours.add(hourKey);
+        return true;
+      }
+      return false;
+    });
+  };
+
   const fetchData = async () => {
     try {
       const res = await fetch("/api/sensor", { cache: "no-store" });
       if (res.ok) {
         const result = await res.json();
-        const sensorList = Array.isArray(result) ? result : result.data || [];
+        const sensorList: SensorData[] = Array.isArray(result) ? result : result.data || [];
         
         if (sensorList.length > 0) {
-          setData(sensorList);
+          // 1. Ambil data paling baru untuk Card Indikator Real-time
           setLatest(sensorList[0]);
+
+          // 2. Filter data per jam untuk Tabel & CSV Export
+          const hourlyData = filterHourly(sensorList);
+          setData(hourlyData);
         } else {
           setData([]);
           setLatest({ ph: 0, temp: 0, tds: 0 });
@@ -79,7 +106,6 @@ export default function Home() {
     const headers = "Waktu,pH,Suhu (C),Konsentrasi (PPM)\n";
     const rows = data
       .map((item) => {
-        // Konversi string UTC dari DB ke format tanggal lokal WIB
         const waktuWIB = item.created_at
           ? new Date(item.created_at).toLocaleString("id-ID", {
               timeZone: "Asia/Jakarta",
