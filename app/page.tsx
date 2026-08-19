@@ -15,6 +15,29 @@ export default function Home() {
   const [data, setData] = useState<SensorData[]>([]);
   const [latest, setLatest] = useState<SensorData>({ ph: 0, temp: 0, tds: 0 });
 
+  // Helper untuk menyaring data menjadi 1 baris per jam (WIB)
+  const filterHourly = (list: SensorData[]) => {
+    const seenHours = new Set<string>();
+    return list.filter((item) => {
+      if (!item.created_at) return false;
+      
+      // Kunci unik berdasarkan Tanggal & Jam lokal WIB (contoh: "18/08/2026, 16")
+      const hourKey = new Date(item.created_at).toLocaleString("id-ID", {
+        timeZone: "Asia/Jakarta",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+      });
+
+      if (!seenHours.has(hourKey)) {
+        seenHours.add(hourKey);
+        return true;
+      }
+      return false;
+    });
+  };
+
   const fetchData = async () => {
     try {
       const res = await fetch("/api/sensor", { cache: "no-store" });
@@ -23,9 +46,12 @@ export default function Home() {
         const sensorList: SensorData[] = Array.isArray(result) ? result : result.data || [];
         
         if (sensorList.length > 0) {
-          // Menampilkan seluruh data real-time (setiap 5 detik)
+          // 1. Ambil data paling baru untuk Card Indikator Real-time (setiap 5s)
           setLatest(sensorList[0]);
-          setData(sensorList);
+
+          // 2. Filter data per jam untuk Tabel & CSV Export
+          const hourlyData = filterHourly(sensorList);
+          setData(hourlyData);
         } else {
           setData([]);
           setLatest({ ph: 0, temp: 0, tds: 0 });
@@ -74,7 +100,7 @@ export default function Home() {
     }
   };
 
-  // Fungsi Ekspor CSV dengan Waktu WIB (GMT+7)
+  // Fungsi Ekspor CSV dengan Waktu Terkalibrasi WIB (GMT+7)
   const exportToCSV = () => {
     if (data.length === 0) return;
     const headers = "Waktu,pH,Suhu (C),Konsentrasi (PPM)\n";
@@ -152,7 +178,7 @@ export default function Home() {
         {/* Table Catatan Data */}
         <div className="bg-white text-slate-900 rounded-2xl p-6 shadow-lg border border-slate-100">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h2 className="text-lg font-bold">Catatan Data</h2>
+            <h2 className="text-lg font-bold">Catatan Data (Per Jam)</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleClearAll}
