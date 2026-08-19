@@ -32,7 +32,7 @@ export async function GET() {
       .from('sensor_data')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(24);
+      .limit(30);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
